@@ -81,7 +81,7 @@ See [SECURITY.md](SECURITY.md) and [API.md](API.md) for details.
 ```powershell
 .\.venv\Scripts\python -m pytest
 .\.venv\Scripts\python -m ruff check .
-.\.venv\Scripts\python -m black --check .
+.\.venv\Scripts\python -m black .
 .\.venv\Scripts\python -m isort --check-only .
 ```
 
@@ -93,7 +93,7 @@ See [SECURITY.md](SECURITY.md) and [API.md](API.md) for details.
 .\.venv\Scripts\python -m pre_commit run --hook-stage push --all-files
 ```
 
-The pre-commit pipeline checks `ruff`, `black --check`, and `isort --check-only` before the push is accepted.
+The pre-commit pipeline runs `ruff`, `black`, and `isort --check-only` before the push is accepted.
 
 ## Screenshots Placeholders
 

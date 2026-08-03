@@ -273,7 +273,7 @@ class SecretService:
                     self._data_key_manager.decrypt_value(
                         context.data_key,
                         secret.secret_value_encrypted,
-                    )
+                    ),
                 )
                 secret.secret_value_encrypted = self._data_key_manager.encrypt_value(
                     context.data_key,
