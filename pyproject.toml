@@ -1,0 +1,85 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vaultpy"
+version = "0.1.0"
+description = "Lightweight secure secrets manager with FastAPI and NiceGUI."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+  { name = "Farley Santos" },
+]
+dependencies = [
+  "alembic>=1.16.4",
+  "cryptography>=45.0.6",
+  "fastapi>=0.116.1",
+  "loguru>=0.7.3",
+  "nicegui>=2.24.0",
+  "pydantic-settings>=2.10.1",
+  "PyJWT>=2.10.1",
+  "python-multipart>=0.0.20",
+  "SQLAlchemy>=2.0.43",
+  "uvicorn[standard]>=0.35.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "black>=25.1.0",
+  "factory-boy>=3.3.3",
+  "flake8>=7.3.0",
+  "httpx>=0.28.1",
+  "isort>=6.0.1",
+  "mypy>=1.17.1",
+  "pytest>=8.4.1",
+  "pytest-cov>=6.2.1",
+  "ruff>=0.12.8",
+]
+
+[project.scripts]
+vaultpy = "vaultpy.main:run"
+
+[tool.black]
+line-length = 120
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "S", "C4"]
+ignore = ["B008", "S101", "S105", "S106"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=src/vaultpy --cov-report=term-missing --cov-fail-under=80"
+
+[tool.coverage.run]
+branch = true
+omit = [
+  "src/vaultpy/presentation/ui.py",
+  "src/vaultpy/main.py",
+]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+strict_optional = true
+mypy_path = "src"
+packages = ["vaultpy"]
+
+[tool.flake8]
+max-line-length = 120
+extend-ignore = ["E203", "W503"]
+exclude = [".venv", ".git", "__pycache__", "build", "dist"]

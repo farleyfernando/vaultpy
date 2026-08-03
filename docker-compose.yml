@@ -1,0 +1,13 @@
+services:
+  vaultpy:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    environment:
+      VAULTPY_HOST: 0.0.0.0
+      VAULTPY_PORT: 8000
+      VAULTPY_JWT_SECRET_KEY: change-me
+      VAULTPY_UI_STORAGE_SECRET: change-me
+    volumes:
+      - .:/app
