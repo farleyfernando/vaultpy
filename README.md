@@ -35,6 +35,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the component map.
    .\.venv\Scripts\Activate.ps1
    python -m pip install --upgrade pip
    python -m pip install -e .[dev]
+   npm.cmd install
    ```
 
 2. Run the application:
@@ -83,6 +84,16 @@ See [SECURITY.md](SECURITY.md) and [API.md](API.md) for details.
 .\.venv\Scripts\python -m flake8 .
 .\.venv\Scripts\python -m mypy src
 ```
+
+## Git Hooks
+
+`npm.cmd install` enables Husky and installs a `pre-push` hook that runs:
+
+```powershell
+.\.venv\Scripts\python -m pre_commit run --hook-stage push --all-files
+```
+
+The pre-commit pipeline checks `ruff`, `black --check`, `flake8`, `mypy`, and `pytest` before the push is accepted.
 
 ## Screenshots Placeholders
 

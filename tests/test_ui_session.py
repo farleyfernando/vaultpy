@@ -46,9 +46,7 @@ def test_resolve_authenticated_context_refreshes_expired_access_token(
     )
     original_access_minutes = container.jwt_service._access_minutes
     container.jwt_service._access_minutes = -1
-    expired_access_token = container.jwt_service.create_access_token(
-        str(payload["sid"])
-    )
+    expired_access_token = container.jwt_service.create_access_token(str(payload["sid"]))
     container.jwt_service._access_minutes = original_access_minutes
 
     storage: dict[str, str] = {

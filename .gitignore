@@ -15,9 +15,12 @@ wheels/
 .mypy_cache/
 .coverage
 htmlcov/
+node_modules/
+.husky/_/
 
 # Local runtime files
 *.db
 *.db-shm
 *.db-wal
 .env
+.nicegui/

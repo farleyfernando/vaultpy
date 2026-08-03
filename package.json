@@ -1,0 +1,11 @@
+{
+  "name": "vaultpy",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "prepush": "node scripts/run_python_in_venv.js -m pre_commit run --hook-stage push --all-files"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}

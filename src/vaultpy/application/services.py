@@ -278,9 +278,7 @@ class SecretService:
                     context.data_key,
                     self._serialize_secret_content(
                         secret_value=(
-                            request.secret_value
-                            if request.secret_value is not None
-                            else current_content.secret_value
+                            request.secret_value if request.secret_value is not None else current_content.secret_value
                         ),
                         secret_fields=(
                             request.secret_fields

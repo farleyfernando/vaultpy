@@ -46,9 +46,7 @@ def resolve_authenticated_context(
             clear_auth_storage(storage)
             return None
         try:
-            tokens = auth_service.refresh(
-                RefreshRequest(refresh_token=str(refresh_token))
-            )
+            tokens = auth_service.refresh(RefreshRequest(refresh_token=str(refresh_token)))
             storage["access_token"] = tokens.access_token
             storage["refresh_token"] = tokens.refresh_token
             return auth_service.context_from_token(tokens.access_token)
@@ -70,10 +68,7 @@ def collect_secret_fields(rows: list[dict[str, str]]) -> dict[str, str]:
 
 def secret_field_rows_from_mapping(secret_fields: dict[str, str]) -> list[dict[str, str]]:
     """Convert stored structured fields into editable dashboard rows."""
-    return [
-        {"key": key, "value": value}
-        for key, value in secret_fields.items()
-    ]
+    return [{"key": key, "value": value} for key, value in secret_fields.items()]
 
 
 def register_ui(fastapi_app: FastAPI, container: Container) -> None:
@@ -175,6 +170,7 @@ def register_ui(fastapi_app: FastAPI, container: Container) -> None:
                     ui.label("VaultPy Dashboard").classes("text-3xl font-bold")
                     ui.label("FastAPI + NiceGUI secure secrets manager")
                 with ui.row().classes("gap-2"):
+                    ui.button("Audit Logs", on_click=lambda: open_audit_logs())
                     ui.button("Generate Password", on_click=lambda: generator_dialog.open())
                     ui.button("New Secret", on_click=lambda: open_new_secret()).classes("bg-primary text-white")
 
@@ -199,29 +195,20 @@ def register_ui(fastapi_app: FastAPI, container: Container) -> None:
                 f"Last access: {dashboard.last_access_at.isoformat() if dashboard.last_access_at else 'Never'}"
             )
 
-            search_box = ui.input("Real-time search by name, category, username, or tag").classes("w-full")
+            search_box = ui.input("Real-time search by name, category, or tag").classes("w-full")
             table = ui.table(
                 columns=[
                     {"name": "id", "label": "ID", "field": "id"},
                     {"name": "name", "label": "Name", "field": "name"},
                     {"name": "category", "label": "Category", "field": "category"},
                     {"name": "updated_at", "label": "Updated At", "field": "updated_at"},
+                    {"name": "actions", "label": "Actions", "field": "actions", "align": "right"},
                 ],
                 rows=[],
                 row_key="id",
                 selection="single",
                 pagination=10,
             ).classes("w-full")
-
-            with ui.row().classes("gap-2"):
-                ui.button("View", on_click=lambda: view_selected())
-                ui.button("Edit", on_click=lambda: edit_selected())
-                ui.button("Delete", on_click=lambda: delete_selected(), color="warning")
-                ui.button("Copy Password", on_click=lambda: copy_selected(), color="secondary")
-
-            ui.separator()
-            ui.label("Recent audit activity").classes("text-xl font-semibold")
-            audit_column = ui.column().classes("gap-2")
 
             with ui.dialog() as edit_dialog, ui.card().classes("w-[720px] max-w-full"):
                 ui.label("Add secret").classes("text-xl font-semibold")
@@ -369,7 +356,34 @@ def register_ui(fastapi_app: FastAPI, container: Container) -> None:
                         ),
                     )
 
-            def selected_secret_id() -> int | None:
+            with ui.dialog() as audit_dialog, ui.card().classes("w-[960px] max-w-full"):
+                ui.label("Audit Logs").classes("text-xl font-semibold")
+                audit_table = ui.table(
+                    columns=[
+                        {"name": "created_at", "label": "Timestamp", "field": "created_at"},
+                        {"name": "action", "label": "Action", "field": "action"},
+                        {"name": "user", "label": "User", "field": "user"},
+                        {"name": "ip_address", "label": "Source", "field": "ip_address"},
+                        {"name": "details", "label": "Details", "field": "details"},
+                    ],
+                    rows=[],
+                    row_key="id",
+                    pagination=10,
+                ).classes("w-full")
+                with ui.row().classes("justify-end w-full"):
+                    ui.button("Close", on_click=audit_dialog.close)
+
+            pending_delete: dict[str, int | str | None] = {"id": None, "name": None}
+            with ui.dialog() as delete_dialog, ui.card().classes("w-[420px] max-w-full"):
+                ui.label("Confirm deletion").classes("text-xl font-semibold")
+                delete_message = ui.label("Are you sure you want to delete this secret?")
+                with ui.row().classes("justify-end w-full gap-2"):
+                    ui.button("Cancel", on_click=delete_dialog.close)
+                    ui.button("Delete", on_click=lambda: confirm_delete_secret(), color="negative")
+
+            def resolve_secret_id(secret_id: int | None = None) -> int | None:
+                if secret_id is not None:
+                    return secret_id
                 selected_rows = table.selected
                 if not selected_rows:
                     ui.notify("Select a secret first.", color="warning")
@@ -399,14 +413,22 @@ def register_ui(fastapi_app: FastAPI, container: Container) -> None:
                 table.update()
 
             def refresh_audits() -> None:
-                audit_column.clear()
-                for entry in container.secret_service.list_audit_logs():
-                    with audit_column:
-                        audit_message = (
-                            f"{entry.created_at.isoformat(timespec='seconds')} | "
-                            f"{entry.action.upper()} | {entry.details}"
-                        )
-                        ui.label(audit_message)
+                audit_table.rows = [
+                    {
+                        "id": entry.id,
+                        "created_at": entry.created_at.isoformat(timespec="seconds"),
+                        "action": entry.action.upper(),
+                        "user": entry.user,
+                        "ip_address": entry.ip_address,
+                        "details": entry.details,
+                    }
+                    for entry in container.secret_service.list_audit_logs()
+                ]
+                audit_table.update()
+
+            def open_audit_logs() -> None:
+                refresh_audits()
+                audit_dialog.open()
 
             def open_new_secret() -> None:
                 reset_form()
@@ -428,8 +450,8 @@ def register_ui(fastapi_app: FastAPI, container: Container) -> None:
                 form_notes.value = secret.notes or ""
                 form_tags.value = ",".join(secret.tags)
 
-            def view_selected() -> None:
-                secret_id = selected_secret_id()
+            def view_secret(secret_id: int | None = None) -> None:
+                secret_id = resolve_secret_id(secret_id)
                 if secret_id is None:
                     return
                 try:
@@ -458,8 +480,8 @@ def register_ui(fastapi_app: FastAPI, container: Container) -> None:
                 except Exception as exc:  # pragma: no cover
                     notify_error(exc)
 
-            def edit_selected() -> None:
-                secret_id = selected_secret_id()
+            def edit_secret(secret_id: int | None = None) -> None:
+                secret_id = resolve_secret_id(secret_id)
                 if secret_id is None:
                     return
                 try:
@@ -468,21 +490,39 @@ def register_ui(fastapi_app: FastAPI, container: Container) -> None:
                 except Exception as exc:  # pragma: no cover
                     notify_error(exc)
 
-            def delete_selected() -> None:
-                secret_id = selected_secret_id()
+            def request_delete_secret(secret_id: int | None = None) -> None:
+                secret_id = resolve_secret_id(secret_id)
                 if secret_id is None:
+                    return
+                try:
+                    secret = container.secret_service.get_secret(secret_id)
+                    pending_delete["id"] = secret.id
+                    pending_delete["name"] = secret.name
+                    delete_message.text = f"Delete secret '{secret.name}'? This action cannot be undone."
+                    delete_dialog.open()
+                except Exception as exc:  # pragma: no cover
+                    notify_error(exc)
+
+            def confirm_delete_secret() -> None:
+                secret_id = pending_delete["id"]
+                if not isinstance(secret_id, int):
+                    ui.notify("No secret selected for deletion.", color="warning")
+                    delete_dialog.close()
                     return
                 try:
                     container.secret_service.delete_secret(context, secret_id, "ui-local")
                     ui.notify("Secret deleted.", color="positive")
+                    pending_delete["id"] = None
+                    pending_delete["name"] = None
+                    delete_dialog.close()
                     refresh_dashboard()
                     refresh_rows()
                     refresh_audits()
                 except Exception as exc:  # pragma: no cover
                     notify_error(exc)
 
-            def copy_selected() -> None:
-                secret_id = selected_secret_id()
+            def copy_secret(secret_id: int | None = None) -> None:
+                secret_id = resolve_secret_id(secret_id)
                 if secret_id is None:
                     return
                 try:
@@ -502,6 +542,29 @@ def register_ui(fastapi_app: FastAPI, container: Container) -> None:
                 except Exception as exc:  # pragma: no cover
                     notify_error(exc)
 
+            with table.add_slot("body-cell-actions"):
+                with table.cell("actions"):
+                    with ui.row().classes("items-center justify-end no-wrap q-gutter-xs"):
+                        ui.button(icon="visibility").props("flat round dense color=primary").tooltip("View").on(
+                            "click",
+                            handler=lambda e: view_secret(int(e.args)),
+                            js_handler="() => emit(props.row.id)",
+                        )
+                        ui.button(icon="edit").props("flat round dense color=secondary").tooltip("Edit").on(
+                            "click",
+                            handler=lambda e: edit_secret(int(e.args)),
+                            js_handler="() => emit(props.row.id)",
+                        )
+                        ui.button(icon="content_copy").props("flat round dense color=accent").tooltip("Copy").on(
+                            "click",
+                            handler=lambda e: copy_secret(int(e.args)),
+                            js_handler="() => emit(props.row.id)",
+                        )
+                        ui.button(icon="delete").props("flat round dense color=negative").tooltip("Delete").on(
+                            "click",
+                            handler=lambda e: request_delete_secret(int(e.args)),
+                            js_handler="() => emit(props.row.id)",
+                        )
             search_box.on("update:model-value", lambda _: refresh_rows())
             reset_form()
             refresh_rows()
