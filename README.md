@@ -98,3 +98,6 @@ The pre-commit pipeline checks `ruff`, `black --check`, and `isort --check-only`
 ## Screenshots Placeholders
 
 Placeholder files for future screenshots live in `docs\screenshots\`.
+
+## Password test
+`u:+Ix+Lv9J<g|Bd4>`

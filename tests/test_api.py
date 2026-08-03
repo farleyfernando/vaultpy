@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 import factory
 from fastapi.testclient import TestClient
 from sqlalchemy import text
@@ -61,7 +63,16 @@ def test_bootstrap_login_crud_search_and_audit_flow(client: TestClient, master_p
 
     value_response = client.get(f"/api/v1/secrets/{secret_id}/value", headers=headers)
     assert value_response.status_code == 200
+    assert value_response.json()["secret_name"] == payload["name"]
     assert value_response.json()["secret_value"] == payload["secret_value"]
+
+    value_by_name_response = client.get(
+        f"/api/v1/secrets/by-name/{quote(payload['name'], safe='')}/value",
+        headers=headers,
+    )
+    assert value_by_name_response.status_code == 200
+    assert value_by_name_response.json()["secret_name"] == payload["name"]
+    assert value_by_name_response.json()["secret_value"] == payload["secret_value"]
 
     update_response = client.put(
         f"/api/v1/secrets/{secret_id}",
@@ -138,6 +149,7 @@ def test_secret_can_store_multiple_named_values(
 
     value_response = client.get(f"/api/v1/secrets/{secret_id}/value", headers=headers)
     assert value_response.status_code == 200
+    assert value_response.json()["secret_name"] == "api_fluid"
     assert value_response.json()["secret_value"] is None
     assert value_response.json()["secret_fields"] == {
         "chave_secret": "xxxxx",
@@ -161,5 +173,6 @@ def test_secret_can_store_multiple_named_values(
 
     updated_value_response = client.get(f"/api/v1/secrets/{secret_id}/value", headers=headers)
     assert updated_value_response.status_code == 200
+    assert updated_value_response.json()["secret_name"] == "api_fluid"
     assert updated_value_response.json()["secret_fields"]["chave_secret"] == "rotacionada"
     assert updated_value_response.json()["secret_fields"]["tenant"] == "fluid-prod"

@@ -164,6 +164,7 @@ class SecretResponse(BaseModel):
 class SecretValueResponse(BaseModel):
     """Decrypted secret value."""
 
+    secret_name: str
     secret_value: str | None
     secret_fields: dict[str, str] = Field(default_factory=dict)
 

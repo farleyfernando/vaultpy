@@ -85,6 +85,13 @@ class SqlAlchemySecretRepository:
             return None
         return self._to_entity(model)
 
+    def get_by_name(self, name: str, *, include_deleted: bool = False) -> Secret | None:
+        stmt = select(SecretModel).where(SecretModel.name == name.strip()).order_by(SecretModel.updated_at.desc())
+        if not include_deleted:
+            stmt = stmt.where(SecretModel.deleted_at.is_(None))
+        model = self._session.scalars(stmt).first()
+        return self._to_entity(model) if model else None
+
     def list_active(self) -> list[Secret]:
         stmt = select(SecretModel).where(SecretModel.deleted_at.is_(None)).order_by(SecretModel.updated_at.desc())
         models = self._session.scalars(stmt).all()

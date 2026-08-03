@@ -19,7 +19,7 @@ from vaultpy.application.dto import (
     SetupRequest,
     TokenPair,
 )
-from vaultpy.application.interfaces import UnitOfWorkFactory
+from vaultpy.application.interfaces import UnitOfWork, UnitOfWorkFactory
 from vaultpy.application.security import (
     DataKeyManager,
     JwtService,
@@ -269,6 +269,7 @@ class SecretService:
                 secret.secret_kind = request.secret_kind
             if request.secret_value is not None or request.secret_fields is not None:
                 current_content = self._deserialize_secret_content(
+                    secret.name,
                     self._data_key_manager.decrypt_value(
                         context.data_key,
                         secret.secret_value_encrypted,
@@ -332,23 +333,20 @@ class SecretService:
             secret = uow.secrets.get_by_id(secret_id)
             if secret is None:
                 raise SecretNotFoundError(f"Secret {secret_id} was not found.")
-            secret.last_access_at = utcnow()
-            uow.secrets.save(secret)
-            uow.audits.create(
-                AuditLog(
-                    id=None,
-                    user=context.user,
-                    action="secret_view",
-                    ip_address=ip_address,
-                    details=f"Viewed secret value for '{secret.name}'.",
-                    created_at=secret.last_access_at,
-                )
-            )
-            decrypted_value = self._data_key_manager.decrypt_value(
-                context.data_key,
-                secret.secret_value_encrypted,
-            )
-        return self._deserialize_secret_content(decrypted_value)
+            return self._build_secret_value_response(context, secret, ip_address, uow)
+
+    def get_secret_value_by_name(
+        self,
+        context: AuthenticatedContext,
+        name: str,
+        ip_address: str,
+    ) -> SecretValueResponse:
+        """Return a decrypted secret value using the secret name."""
+        with self._uow_factory() as uow:
+            secret = uow.secrets.get_by_name(name)
+            if secret is None:
+                raise SecretNotFoundError(f"Secret '{name.strip()}' was not found.")
+            return self._build_secret_value_response(context, secret, ip_address, uow)
 
     def dashboard(self) -> DashboardResponse:
         """Return dashboard aggregates."""
@@ -394,6 +392,31 @@ class SecretService:
         )
         return PasswordGenerateResponse(password=password)
 
+    def _build_secret_value_response(
+        self,
+        context: AuthenticatedContext,
+        secret: Secret,
+        ip_address: str,
+        uow: UnitOfWork,
+    ) -> SecretValueResponse:
+        secret.last_access_at = utcnow()
+        uow.secrets.save(secret)
+        uow.audits.create(
+            AuditLog(
+                id=None,
+                user=context.user,
+                action="secret_view",
+                ip_address=ip_address,
+                details=f"Viewed secret value for '{secret.name}'.",
+                created_at=secret.last_access_at,
+            )
+        )
+        decrypted_value = self._data_key_manager.decrypt_value(
+            context.data_key,
+            secret.secret_value_encrypted,
+        )
+        return self._deserialize_secret_content(secret.name, decrypted_value)
+
     @staticmethod
     def _serialize_secret_content(
         *,
@@ -418,18 +441,19 @@ class SecretService:
         )
 
     @staticmethod
-    def _deserialize_secret_content(payload: str) -> SecretValueResponse:
+    def _deserialize_secret_content(secret_name: str, payload: str) -> SecretValueResponse:
         try:
             decoded = json.loads(payload)
         except json.JSONDecodeError:
-            return SecretValueResponse(secret_value=payload, secret_fields={})
+            return SecretValueResponse(secret_name=secret_name, secret_value=payload, secret_fields={})
         if not isinstance(decoded, dict):
-            return SecretValueResponse(secret_value=payload, secret_fields={})
+            return SecretValueResponse(secret_name=secret_name, secret_value=payload, secret_fields={})
         secret_value = decoded.get("secret_value")
         raw_fields = decoded.get("secret_fields", {})
         if not isinstance(raw_fields, dict):
             raw_fields = {}
         return SecretValueResponse(
+            secret_name=secret_name,
             secret_value=str(secret_value).strip() if secret_value else None,
             secret_fields={
                 str(key).strip(): str(value).strip()

@@ -70,10 +70,18 @@ GET /api/v1/secrets/1/value
 Authorization: Bearer <access_token>
 ```
 
+## Read decrypted secret value by name
+
+```http
+GET /api/v1/secrets/by-name/GitLab Production/value
+Authorization: Bearer <access_token>
+```
+
 Example response for a structured secret:
 
 ```json
 {
+  "secret_name": "GitLab Production",
   "secret_value": null,
   "secret_fields": {
     "chave_secret": "xxxxx",

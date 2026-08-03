@@ -137,4 +137,12 @@ def create_api_router(container: Container) -> APIRouter:
     ) -> SecretValueResponse:
         return container.secret_service.get_secret_value(context, secret_id, get_client_ip(request))
 
+    @router.get("/secrets/by-name/{name}/value", response_model=SecretValueResponse)
+    def get_secret_value_by_name_endpoint(
+        name: str,
+        request: Request,
+        context: AuthenticatedContext = Depends(get_authenticated_context),
+    ) -> SecretValueResponse:
+        return container.secret_service.get_secret_value_by_name(context, name, get_client_ip(request))
+
     return router

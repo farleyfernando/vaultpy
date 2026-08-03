@@ -27,6 +27,9 @@ class SecretRepository(Protocol):
     def get_by_id(self, secret_id: int, *, include_deleted: bool = False) -> Secret | None:
         """Retrieve a secret by identifier."""
 
+    def get_by_name(self, name: str, *, include_deleted: bool = False) -> Secret | None:
+        """Retrieve a secret by name."""
+
     def list_active(self) -> list[Secret]:
         """List all non-deleted secrets."""
 
