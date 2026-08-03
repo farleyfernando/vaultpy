@@ -64,6 +64,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the component map.
 - `PUT /api/v1/secrets/{id}`
 - `DELETE /api/v1/secrets/{id}`
 - `GET /api/v1/secrets/{id}/value`
+- `GET /api/v1/secrets/by-name/{name}/value`
 
 ## Security Notes
 
