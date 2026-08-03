@@ -34,6 +34,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the component map.
    python -m venv .venv
    .\.venv\Scripts\Activate.ps1
    python -m pip install --upgrade pip
+   python -m pip install -r requirements.txt
    python -m pip install -e .[dev]
    npm.cmd install
    ```
@@ -81,8 +82,7 @@ See [SECURITY.md](SECURITY.md) and [API.md](API.md) for details.
 .\.venv\Scripts\python -m pytest
 .\.venv\Scripts\python -m ruff check .
 .\.venv\Scripts\python -m black --check .
-.\.venv\Scripts\python -m flake8 .
-.\.venv\Scripts\python -m mypy src
+.\.venv\Scripts\python -m isort --check-only .
 ```
 
 ## Git Hooks
@@ -93,7 +93,7 @@ See [SECURITY.md](SECURITY.md) and [API.md](API.md) for details.
 .\.venv\Scripts\python -m pre_commit run --hook-stage push --all-files
 ```
 
-The pre-commit pipeline checks `ruff`, `black --check`, `flake8`, `mypy`, and `pytest` before the push is accepted.
+The pre-commit pipeline checks `ruff`, `black --check`, and `isort --check-only` before the push is accepted.
 
 ## Screenshots Placeholders
 

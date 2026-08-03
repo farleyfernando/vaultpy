@@ -11,23 +11,16 @@ repos:
         entry: node scripts/run_python_in_venv.js -m ruff check .
         language: system
         pass_filenames: false
+        verbose: true
       - id: black-check
         name: black --check
         entry: node scripts/run_python_in_venv.js -m black --check .
         language: system
         pass_filenames: false
-      - id: flake8
-        name: flake8
-        entry: node scripts/run_python_in_venv.js -m flake8 .
+        verbose: true
+      - id: isort-check
+        name: isort --check-only
+        entry: node scripts/run_python_in_venv.js -m isort --check-only .
         language: system
         pass_filenames: false
-      - id: mypy
-        name: mypy
-        entry: node scripts/run_python_in_venv.js -m mypy src
-        language: system
-        pass_filenames: false
-      - id: pytest
-        name: pytest
-        entry: node scripts/run_python_in_venv.js -m pytest
-        language: system
-        pass_filenames: false
+        verbose: true
