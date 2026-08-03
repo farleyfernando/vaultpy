@@ -164,6 +164,7 @@ def register_ui(fastapi_app: FastAPI, container: Container) -> None:
         with ui.column().classes("w-full max-w-7xl mx-auto gap-6 p-6"):
             edit_dialog: Any
             generator_dialog: Any
+            logout_dialog: Any
 
             with ui.row().classes("w-full items-center justify-between"):
                 with ui.column().classes("gap-1"):
@@ -173,19 +174,7 @@ def register_ui(fastapi_app: FastAPI, container: Container) -> None:
                     ui.button("Audit Logs", on_click=lambda: open_audit_logs())
                     ui.button("Generate Password", on_click=lambda: generator_dialog.open())
                     ui.button("New Secret", on_click=lambda: open_new_secret()).classes("bg-primary text-white")
-
-                    def logout() -> None:
-                        access_token = str(nicegui_app.storage.user.get("access_token", ""))
-                        try:
-                            if access_token:
-                                container.auth_service.logout(access_token, "ui-local")
-                        except AuthorizationError:
-                            ui.notify("Session already expired. Signed out locally.", color="warning")
-                        finally:
-                            clear_auth_storage(nicegui_app.storage.user)
-                            ui.navigate.to("/login")
-
-                    ui.button("Logout", on_click=logout, color="negative")
+                    ui.button("Logout", on_click=lambda: logout_dialog.open(), color="negative")
 
             stat_total = ui.label(f"Total secrets: {dashboard.total_secrets}").classes("text-lg font-medium")
             stat_categories = ui.label(
@@ -355,6 +344,25 @@ def register_ui(fastapi_app: FastAPI, container: Container) -> None:
                             f"navigator.clipboard.writeText({json.dumps(str(generated.value or ''))})"
                         ),
                     )
+
+            def logout() -> None:
+                access_token = str(nicegui_app.storage.user.get("access_token", ""))
+                try:
+                    if access_token:
+                        container.auth_service.logout(access_token, "ui-local")
+                except AuthorizationError:
+                    ui.notify("Session already expired. Signed out locally.", color="warning")
+                finally:
+                    clear_auth_storage(nicegui_app.storage.user)
+                    logout_dialog.close()
+                    ui.navigate.to("/login")
+
+            with ui.dialog() as logout_dialog, ui.card().classes("w-[420px] max-w-full"):
+                ui.label("Confirm logout").classes("text-xl font-semibold")
+                ui.label("Are you sure you want to sign out?")
+                with ui.row().classes("justify-end w-full gap-2"):
+                    ui.button("Cancel", on_click=logout_dialog.close)
+                    ui.button("Logout", on_click=logout, color="negative")
 
             with ui.dialog() as audit_dialog, ui.card().classes("w-[960px] max-w-full"):
                 ui.label("Audit Logs").classes("text-xl font-semibold")

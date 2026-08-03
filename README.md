@@ -26,26 +26,24 @@ src/vaultpy/
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the component map.
 
-## Quick Start
+## Installation
 
 1. Create the environment:
 
    ```powershell
-   python -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   python -m pip install --upgrade pip
-   python -m pip install -r requirements.txt
-   python -m pip install -e .[dev]
+   uv sync --extra dev
    npm.cmd install
    ```
 
-2. Run the application:
+## Quick Start
+
+1. Run the application:
 
    ```powershell
-   python main.py
+   uv run vaultpy
    ```
 
-3. Open:
+2. Open:
    - UI: `http://127.0.0.1:8000/`
    - API docs: `http://127.0.0.1:8000/docs`
 
