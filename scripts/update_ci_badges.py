@@ -18,17 +18,21 @@ def build_parser() -> argparse.ArgumentParser:
 
 def read_test_stats(junitxml: Path) -> tuple[int, int]:
     content = junitxml.read_text(encoding="utf-8")
-    match = re.search(
-        r'<testsuite\b[^>]*\btests="(?P<tests>\d+)"[^>]*\bfailures="(?P<failures>\d+)"'
-        r'[^>]*\berrors="(?P<errors>\d+)"[^>]*\bskipped="(?P<skipped>\d+)"',
-        content,
-    )
-    if match is None:
+    suite = re.search(r"<testsuite\b([^>]*)>", content)
+    if suite is None:
         raise ValueError("JUnit XML report does not contain a testsuite element.")
-    tests = int(match.group("tests"))
-    failures = int(match.group("failures"))
-    errors = int(match.group("errors"))
-    skipped = int(match.group("skipped"))
+    attributes = suite.group(1)
+
+    def read_int(name: str) -> int:
+        match = re.search(rf'\b{name}="(?P<value>\d+)"', attributes)
+        if match is None:
+            raise ValueError(f"JUnit XML report is missing the {name} attribute.")
+        return int(match.group("value"))
+
+    tests = read_int("tests")
+    failures = read_int("failures")
+    errors = read_int("errors")
+    skipped = read_int("skipped")
     passed = tests - failures - errors - skipped
     return passed, tests
 
