@@ -79,6 +79,8 @@ See [SECURITY.md](SECURITY.md) and [API.md](API.md) for details.
 
 ```powershell
 .\.venv\Scripts\python -m pytest
+.\.venv\Scripts\python -m pytest --cov-report=html:htmlcov
+start htmlcov\index.html
 .\.venv\Scripts\python -m ruff check .
 .\.venv\Scripts\python -m black .
 .\.venv\Scripts\python -m isort --check-only .
@@ -97,6 +99,3 @@ The pre-commit pipeline runs `ruff`, `black`, and `isort --check-only` before th
 ## Screenshots Placeholders
 
 Placeholder files for future screenshots live in `docs\screenshots\`.
-
-## Password test
-`u:+Ix+Lv9J<g|Bd4>`
