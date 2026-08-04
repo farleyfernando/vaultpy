@@ -3,15 +3,11 @@ name: CI
 on:
   push:
     branches: ["main", "master"]
-    paths-ignore: ["badges/**"]
   pull_request:
-    paths-ignore: ["badges/**"]
 
 jobs:
   quality:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -30,14 +26,8 @@ jobs:
       - name: MyPy
         run: python -m mypy src
       - name: Pytest
-        run: python -m pytest --junitxml=pytest-report.xml --cov-report=json:coverage.json
-      - name: Generate CI badges
-        run: python scripts/update_ci_badges.py --junitxml pytest-report.xml --coveragejson coverage.json --output badges
-      - name: Commit CI badges
-        if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add badges/tests.svg badges/coverage.svg
-          git diff --cached --quiet || git commit -m "Update CI badges"
-          git push
+        run: python -m pytest --junitxml=pytest-report.xml --cov-report=xml:coverage.xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
