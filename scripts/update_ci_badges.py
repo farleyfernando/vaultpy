@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
-import xml.etree.ElementTree as ET
+import re
 from pathlib import Path
 
 
@@ -18,14 +17,18 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def read_test_stats(junitxml: Path) -> tuple[int, int]:
-    root = ET.parse(junitxml).getroot()
-    suite = root.find("testsuite")
-    if suite is None:
+    content = junitxml.read_text(encoding="utf-8")
+    match = re.search(
+        r'<testsuite\b[^>]*\btests="(?P<tests>\d+)"[^>]*\bfailures="(?P<failures>\d+)"'
+        r'[^>]*\berrors="(?P<errors>\d+)"[^>]*\bskipped="(?P<skipped>\d+)"',
+        content,
+    )
+    if match is None:
         raise ValueError("JUnit XML report does not contain a testsuite element.")
-    tests = int(suite.attrib["tests"])
-    failures = int(suite.attrib.get("failures", 0))
-    errors = int(suite.attrib.get("errors", 0))
-    skipped = int(suite.attrib.get("skipped", 0))
+    tests = int(match.group("tests"))
+    failures = int(match.group("failures"))
+    errors = int(match.group("errors"))
+    skipped = int(match.group("skipped"))
     passed = tests - failures - errors - skipped
     return passed, tests
 
@@ -60,26 +63,31 @@ def badge_svg(label: str, message: str, color: str) -> str:
     label_width = 10 + len(label) * 7
     message_width = 10 + len(message) * 7
     width = label_width + message_width
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="20" role="img" aria-label="{escape(label)}: {escape(message)}">
-  <title>{escape(label)}: {escape(message)}</title>
-  <linearGradient id="s" x2="0" y2="100%">
-    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
-    <stop offset="1" stop-opacity=".1"/>
-  </linearGradient>
-  <mask id="m">
-    <rect width="{width}" height="20" rx="3" fill="#fff"/>
-  </mask>
-  <g mask="url(#m)">
-    <rect width="{label_width}" height="20" fill="#555"/>
-    <rect x="{label_width}" width="{message_width}" height="20" fill="{color}"/>
-    <rect width="{width}" height="20" fill="url(#s)"/>
-  </g>
-  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
-    <text x="{label_width / 2:.1f}" y="14">{escape(label)}</text>
-    <text x="{label_width + message_width / 2:.1f}" y="14">{escape(message)}</text>
-  </g>
-</svg>
-"""
+    aria_label = f"{escape(label)}: {escape(message)}"
+    title = aria_label
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="20" role="img" '
+        f'aria-label="{aria_label}">\n'
+        f"  <title>{title}</title>\n"
+        '  <linearGradient id="s" x2="0" y2="100%">\n'
+        '    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>\n'
+        '    <stop offset="1" stop-opacity=".1"/>\n'
+        "  </linearGradient>\n"
+        '  <mask id="m">\n'
+        f'    <rect width="{width}" height="20" rx="3" fill="#fff"/>\n'
+        "  </mask>\n"
+        '  <g mask="url(#m)">\n'
+        f'    <rect width="{label_width}" height="20" fill="#555"/>\n'
+        f'    <rect x="{label_width}" width="{message_width}" height="20" fill="{color}"/>\n'
+        f'    <rect width="{width}" height="20" fill="url(#s)"/>\n'
+        "  </g>\n"
+        '  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" '
+        'font-size="11">\n'
+        f'    <text x="{label_width / 2:.1f}" y="14">{escape(label)}</text>\n'
+        f'    <text x="{label_width + message_width / 2:.1f}" y="14">{escape(message)}</text>\n'
+        "  </g>\n"
+        "</svg>\n"
+    )
 
 
 def write_badge(path: Path, label: str, message: str, color: str) -> None:
