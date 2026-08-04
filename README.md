@@ -1,5 +1,12 @@
 # VaultPy
 
+![Tests](badges/tests.svg)
+![Coverage](badges/coverage.svg)
+![Python](https://img.shields.io/badge/python-3.14%2B-3776AB?logo=python&logoColor=white)
+![Windows](https://img.shields.io/badge/windows-compatible-0078D4?logo=windows&logoColor=white)
+
+The tests and coverage badges are refreshed by CI after the pipeline runs on `main` or `master`.
+
 VaultPy is a lightweight secrets manager for local environments and small teams. It combines **FastAPI**, **NiceGUI**, **SQLAlchemy**, **JWT**, **PBKDF2-HMAC-SHA256**, and **Fernet** to provide a secure Python-only vault with a web interface and REST API.
 
 ## Features
