@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 
 from tests.factories import SecretPayloadFactory
+from vaultpy.presentation.app import create_app
 from vaultpy.presentation.dependencies import get_container
 
 
@@ -115,6 +116,36 @@ def test_invalid_login_is_rejected(client: TestClient) -> None:
     response = client.post("/api/v1/auth/login", json={"master_password": "WrongPassword#2026"})
 
     assert response.status_code == 400
+
+
+def test_unauthorized_requests_and_missing_secrets_return_api_errors(
+    container,
+    master_password: str,
+    monkeypatch,
+) -> None:
+    """The API should surface auth and not-found errors with the configured handlers."""
+    from vaultpy.presentation import app as app_module
+    from vaultpy.presentation import dependencies as dependencies_module
+
+    monkeypatch.setattr(app_module, "get_container", lambda: container)
+    monkeypatch.setattr(dependencies_module, "get_container", lambda: container)
+
+    with TestClient(create_app()) as test_client:
+        unauthorized_response = test_client.get("/api/v1/dashboard")
+        assert unauthorized_response.status_code == 401
+        assert unauthorized_response.json()["detail"] == "Authorization header is required."
+
+        setup_response = test_client.post("/api/v1/setup", json={"master_password": master_password})
+        assert setup_response.status_code == 201
+
+        login_response = test_client.post("/api/v1/auth/login", json={"master_password": master_password})
+        assert login_response.status_code == 200
+        tokens = login_response.json()
+        headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+        missing_secret_response = test_client.get("/api/v1/secrets/999", headers=headers)
+        assert missing_secret_response.status_code == 404
+        assert missing_secret_response.json()["detail"] == "Secret 999 was not found."
 
 
 def test_secret_can_store_multiple_named_values(

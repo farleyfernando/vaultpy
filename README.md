@@ -78,6 +78,7 @@ See [SECURITY.md](SECURITY.md) and [API.md](API.md) for details.
 ## Tests and Quality
 
 ```powershell
+npm run coverage
 .\.venv\Scripts\python -m pytest
 .\.venv\Scripts\python -m pytest --cov-report=html:htmlcov
 start htmlcov\index.html
@@ -95,6 +96,7 @@ start htmlcov\index.html
 ```
 
 The pre-commit pipeline runs `ruff`, `black`, and `isort --check-only` before the push is accepted.
+The pre-push hook also runs pytest and blocks the push if total coverage falls below 90%.
 
 ## Screenshots Placeholders
 

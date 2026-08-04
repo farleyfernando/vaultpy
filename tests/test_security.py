@@ -2,10 +2,19 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
 
-from vaultpy.application.security import DataKeyManager, PasswordGenerator, PasswordHasher
-from vaultpy.domain.exceptions import EncryptionError, ValidationError
+from vaultpy.application.security import (
+    DataKeyManager,
+    JwtService,
+    PasswordGenerator,
+    PasswordHasher,
+    SessionRegistry,
+    utcnow,
+)
+from vaultpy.domain.exceptions import AuthorizationError, EncryptionError, ValidationError
 
 
 def test_password_hasher_round_trip() -> None:
@@ -62,3 +71,67 @@ def test_password_generator_uses_requested_character_sets() -> None:
     assert any(character.isupper() for character in password)
     assert any(character.isdigit() for character in password)
     assert any(not character.isalnum() for character in password)
+
+
+def test_data_key_manager_rejects_invalid_fernet_key() -> None:
+    """Encryption should fail when the provided key material is invalid."""
+    manager = DataKeyManager(iterations=10_000)
+
+    with pytest.raises(EncryptionError):
+        manager.encrypt_value(b"too-short", "my-secret-value")
+
+
+def test_jwt_service_rejects_invalid_tokens() -> None:
+    """JWT validation should reject the wrong token type and malformed tokens."""
+    service = JwtService(
+        secret_key="jwt-test-secret-with-32-bytes!!!",
+        algorithm="HS256",
+        access_minutes=5,
+        refresh_minutes=10,
+    )
+    access_token = service.create_access_token("session-1")
+
+    with pytest.raises(AuthorizationError):
+        service.decode_token(access_token, expected_type="refresh")
+
+    with pytest.raises(AuthorizationError):
+        service.decode_token("not-a-token", expected_type="access")
+
+
+def test_session_registry_handles_refresh_revoke_and_expiry() -> None:
+    """Active sessions should refresh, expire, and revoke predictably."""
+    registry = SessionRegistry(session_ttl_minutes=1)
+    session_id = registry.create(b"data-key")
+
+    context = registry.get_context(session_id)
+    assert context.session_id == session_id
+
+    registry.refresh(session_id)
+
+    with pytest.raises(AuthorizationError):
+        registry.refresh("missing-session")
+
+    registry._sessions[session_id].expires_at = utcnow() - timedelta(minutes=1)
+
+    with pytest.raises(AuthorizationError):
+        registry.get_context(session_id)
+
+    revoked_session = registry.create(b"other-data-key")
+    registry.revoke(revoked_session)
+
+    with pytest.raises(AuthorizationError):
+        registry.get_context(revoked_session)
+
+
+def test_password_generator_requires_at_least_one_group() -> None:
+    """At least one password character group must be selected."""
+    generator = PasswordGenerator()
+
+    with pytest.raises(ValidationError):
+        generator.generate(
+            length=12,
+            include_symbols=False,
+            include_numbers=False,
+            include_uppercase=False,
+            include_lowercase=False,
+        )

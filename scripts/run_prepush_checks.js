@@ -23,6 +23,7 @@ const checks = [
   { name: 'ruff', args: ['-m', 'ruff', 'check', '.'] },
   { name: 'black --check', args: ['-m', 'black', '--check', '.'] },
   { name: 'isort --check-only', args: ['-m', 'isort', '--check-only', '.'] },
+  { name: 'pytest --cov', args: ['-m', 'pytest'] },
 ];
 
 for (const check of checks) {
