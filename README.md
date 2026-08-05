@@ -108,3 +108,7 @@ The pre-push hook also runs pytest and blocks the push if total coverage falls b
 ## Screenshots Placeholders
 
 Placeholder files for future screenshots live in `docs\screenshots\`.
+
+## Examples
+
+Reusable API examples live in `exemple\api_examples.py`.
